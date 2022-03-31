@@ -21,7 +21,8 @@
     "jsx": "react-jsx",
     "types": [
       "babylonjs",
-      "babylonjs-procedural-textures"
+      "babylonjs-procedural-textures",
+      "babylonjs-materials",
   ],
   },
   "include": [

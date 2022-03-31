@@ -4,26 +4,29 @@ import "./App.css";
 import SimplexNoise from "simplex-noise";
 import { useGameEngine } from "./useGameEngine";
 import * as BABYLON from "babylonjs";
-import * as Textures from "babylonjs-procedural-textures";
+import "babylonjs-materials";
 import {
   getImagePixels,
+  getPixel,
   getTextureByHeight,
-  textureSize,
   waterLevel,
+  textureSize,
+  drawPixel,
 } from "./utils";
 
 const resolution = {
-  x: 2048,
-  y: 2048,
+  x: 4096,
+  y: 4096,
 };
-
-const sampling = 1;
-const noiseSize = 0.003;
-
-const terrainHeight = 0.5;
 
 const grassTexture = new Image(textureSize, textureSize);
 grassTexture.src = "/grass.jpg";
+
+const dryGrassTexture = new Image(textureSize, textureSize);
+dryGrassTexture.src = "/grass1.jpg";
+
+const sandTexture = new Image(textureSize, textureSize);
+sandTexture.src = "/sand.jpg";
 
 const waterTexture = new Image(textureSize, textureSize);
 waterTexture.src = "/water.jpg";
@@ -34,68 +37,127 @@ rocksTexture.src = "/rocks.jpg";
 const dirtTexture = new Image(textureSize, textureSize);
 dirtTexture.src = "/dirt.jpg";
 
-const generateTerrain = (
-  noiseCanvas: HTMLCanvasElement | null,
-  textureCanvas: HTMLCanvasElement | null,
-  specularCanvas: HTMLCanvasElement | null
+const simplex = new SimplexNoise();
+
+const generateNoise = (noiseCanvas: HTMLCanvasElement | null) => {
+  if (!noiseCanvas) {
+    return;
+  }
+
+  const noiseCtx = noiseCanvas.getContext("2d");
+
+  if (!noiseCtx) {
+    return;
+  }
+
+  const noiseSize = 0.003;
+
+  const width = noiseCanvas.width;
+  const height = noiseCanvas.height;
+
+  const noiseData = noiseCtx.getImageData(0, 0, width, height);
+  for (let x = 0; x < width; x++) {
+    for (let y = 0; y < height; y++) {
+      let value = simplex.noise2D(x * noiseSize, y * noiseSize);
+      value = (Math.sin(value) + 1) / 2;
+
+      if (value < waterLevel) value = waterLevel;
+
+      const color = value * 255;
+      drawPixel(noiseData, x, y, width, [color, color, color]);
+    }
+  }
+
+  noiseCtx.putImageData(noiseData, 0, 0);
+};
+
+const generateSpecular = (
+  specularCanvas: HTMLCanvasElement | null,
+  noiseCanvas: HTMLCanvasElement | null
 ) => {
-  if (!noiseCanvas || !textureCanvas || !specularCanvas) {
+  if (!noiseCanvas || !specularCanvas) {
+    return;
+  }
+
+  const noiseCtx = noiseCanvas.getContext("2d");
+
+  const specularCtx = specularCanvas.getContext("2d");
+  if (!noiseCtx || !specularCtx) {
+    return;
+  }
+
+  const width = specularCanvas.width;
+  const height = specularCanvas.height;
+
+  const noiseData = noiseCtx.getImageData(0, 0, width, height);
+  const specularData = specularCtx.getImageData(0, 0, width, height);
+
+  for (let x = 0; x < width; x++) {
+    for (let y = 0; y < height; y++) {
+      const pixel = getPixel(noiseData, x, y, width);
+      const val = pixel.reduce((prev, curr) => prev + curr, 0) / 3;
+      drawPixel(specularData, x, y, width, [200 - val, 200 - val, 200 - val]);
+    }
+  }
+
+  specularCtx.putImageData(specularData, 0, 0);
+};
+
+const generateTexture = (
+  noiseCanvas: HTMLCanvasElement | null,
+  textureCanvas: HTMLCanvasElement | null
+) => {
+  if (!noiseCanvas || !textureCanvas) {
     return;
   }
 
   const noiseCtx = noiseCanvas.getContext("2d");
   const textureCtx = textureCanvas.getContext("2d");
-  const specularCtx = specularCanvas.getContext("2d");
-  if (!noiseCtx || !textureCtx || !specularCtx) {
+  if (!noiseCtx || !textureCtx) {
     return;
   }
 
   const textures = [
     getImagePixels(waterTexture),
+    getImagePixels(sandTexture),
+    getImagePixels(dryGrassTexture),
     getImagePixels(grassTexture),
     getImagePixels(dirtTexture),
     getImagePixels(rocksTexture),
   ];
 
-  const simplex = new SimplexNoise();
-
   const width = noiseCanvas.width;
   const height = noiseCanvas.height;
 
-  const iterX = width / sampling;
-  const iterY = height / sampling;
+  const noiseData = noiseCtx.getImageData(0, 0, width, height);
+  const textureData = textureCtx.getImageData(0, 0, width, height);
+  for (let x = 0; x < width; x++) {
+    for (let y = 0; y < height; y++) {
+      const pixel = getPixel(noiseData, x, y, width);
+      let val = pixel.reduce((prev, curr) => prev + curr, 0) / 3 / 255;
 
-  for (let x = 0; x < iterX; x++) {
-    for (let y = 0; y < iterY; y++) {
-      let value = simplex.noise2D(x * noiseSize, y * noiseSize);
-      value = Math.sin(value * terrainHeight);
-      if (value < waterLevel) value = waterLevel;
-      const color = value * 255 + 127;
-
-      noiseCtx.fillStyle = `rgb(${color}, ${color}, ${color})`;
-      noiseCtx.fillRect(x * sampling, y * sampling, sampling, sampling);
-
-      let valueForTexture = value;
-      if (value > waterLevel) {
-        const randAmount = 0.1;
-        valueForTexture += -randAmount / 2 + Math.random() * randAmount;
-        if (valueForTexture < waterLevel) valueForTexture = waterLevel;
+      if (val > waterLevel + 0.05) {
+        val += Math.random() * 0.05;
+        val += simplex.noise2D(x * 0.04, y * 0.04) * 0.05;
       }
 
-      textureCtx.fillStyle = getTextureByHeight(
-        valueForTexture,
-        x * sampling,
-        y * sampling,
-        textures
-      );
-      textureCtx.fillRect(x * sampling, y * sampling, sampling, sampling);
+      if (val <= waterLevel) val = waterLevel;
 
-      specularCtx.fillStyle = `rgb(${200 - color}, ${200 - color}, ${
-        200 - color
-      })`;
-      specularCtx.fillRect(x * sampling, y * sampling, sampling, sampling);
+      drawPixel(
+        textureData,
+        x,
+        y,
+        width,
+        getTextureByHeight(val, x, y, textures)
+      );
     }
   }
+
+  textureCtx.putImageData(textureData, 0, 0);
+
+  /**
+   * @todo blend
+   */
 };
 
 function App() {
@@ -111,13 +173,7 @@ function App() {
 
   getImagePixels(grassTexture);
 
-  const generate = React.useCallback(() => {
-    generateTerrain(
-      noiseCanvasRef.current,
-      textureCanvasRef.current,
-      specularCanvasRef.current
-    );
-
+  const generateTerrain = React.useCallback(() => {
     if (
       noiseCanvasRef.current &&
       textureCanvasRef.current &&
@@ -180,7 +236,26 @@ function App() {
         ref={specularCanvasRef}
       ></canvas>
       <canvas ref={babylonCanvasRef} className="babylonCanvas"></canvas>
-      <button onClick={generate}>Generate terrain</button>
+      <div className="buttons">
+        <button onClick={() => generateNoise(noiseCanvasRef.current)}>
+          Generate noise
+        </button>
+        <button
+          onClick={() =>
+            generateTexture(noiseCanvasRef.current, textureCanvasRef.current)
+          }
+        >
+          Generate texture
+        </button>
+        <button
+          onClick={() =>
+            generateSpecular(specularCanvasRef.current, noiseCanvasRef.current)
+          }
+        >
+          Generate specular
+        </button>
+        <button onClick={generateTerrain}>Generate terrain</button>
+      </div>
     </div>
   );
 }

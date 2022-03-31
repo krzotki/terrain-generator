@@ -1,33 +1,54 @@
-export const textureSize = 256;
+export const textureSize = 1024;
 
-export const waterLevel = -0.25;
-
-export const grassLevel = 0;
-
-export const dirtLevel = 0.2;
+export const waterLevel = 0.2;
+export const sandLevel = 0.3;
+export const dryGrassLevel = 0.4;
+export const grassLevel = 0.6;
+export const dirtLevel = 0.85;
+export const rocksLevel = 1;
 
 export function getPixel(
   imageData: ImageData,
   x: number,
   y: number,
-  width: number
+  width: number,
+  sample = 1
 ) {
-  const red = (y * (width * 4) + x * 4) % imageData.data.length;
-  const colorIndices = [red, red + 1, red + 2, red + 3];
+  const sum = [0, 0, 0];
 
-  const redIndex = colorIndices[0];
-  const greenIndex = colorIndices[1];
-  const blueIndex = colorIndices[2];
-  const alphaIndex = colorIndices[3];
+  for (let i = 1; i < 1 + sample; i++) {
+    for (let j = 1; j < 1 + sample; j++) {
+      const red = (y * i * (width * 4) + x * 4 * j) % imageData.data.length;
 
-  const redForCoord = imageData.data[redIndex];
-  const greenForCoord = imageData.data[greenIndex];
-  const blueForCoord = imageData.data[blueIndex];
-  const alphaForCoord = imageData.data[alphaIndex];
+      for (let k = 0; k < 3; k++) {
+        sum[k] += imageData.data[red + k];
+      }
+    }
+  }
 
-  return [redForCoord, greenForCoord, blueForCoord, alphaForCoord];
+  return sum.map((v) => v / (sample * sample));
 }
 
+export function drawPixel(
+  imageData: ImageData,
+  x: number,
+  y: number,
+  width: number,
+  pixel: number[],
+  sample = 1
+) {
+  for (let i = 1; i < 1 + sample; i++) {
+    for (let j = 1; j < 1 + sample; j++) {
+      const red = (y * i * (width * 4) + x * 4 * j) % imageData.data.length;
+
+      for (let k = 0; k < 3; k++) {
+        imageData.data[red + k] = pixel[k];
+      }
+
+      imageData.data[red + 3] = 255;
+    }
+  }
+}
 
 export const getTextureByHeight = (
   height: number,
@@ -36,24 +57,32 @@ export const getTextureByHeight = (
   textures: Array<ImageData | undefined>
 ) => {
   if (height <= waterLevel) {
-    return getColorFromTexture(x * 2, y * 2, textures[0]);
+    return getColorFromTexture(x, y, textures[0]);
+  }
+  if (height <= sandLevel) {
+    return getColorFromTexture(x, y, textures[1]);
+  }
+  if (height <= dryGrassLevel) {
+    return getColorFromTexture(x, y, textures[2]);
   }
   if (height <= grassLevel) {
-    return getColorFromTexture(x * 4, y * 4, textures[1]);
+    return getColorFromTexture(x, y, textures[3]);
+  }
+  if (height <= dirtLevel) {
+    return getColorFromTexture(x, y, textures[4]);
+  }
+  if (height <= rocksLevel) {
+    return getColorFromTexture(x, y, textures[5]);
   }
 
-  if(height <= dirtLevel) {
-    return getColorFromTexture(x * 2, y * 2, textures[2]);
-  }
-
-  return getColorFromTexture(x * 4, y * 4, textures[3]);
+  return getColorFromTexture(x, y, textures[5]);
 };
 
 export const getImagePixels = (image: CanvasImageSource) => {
   const tempCanvas = document.createElement("canvas");
   tempCanvas.width = textureSize;
   tempCanvas.height = textureSize;
-  
+
   const ctx = tempCanvas.getContext("2d");
   ctx?.drawImage(image, 0, 0);
 
@@ -73,28 +102,27 @@ export const getColorFromTexture = (
   texture: ImageData | undefined
 ) => {
   if (!texture) {
-    return `rgb(0, 0, 0)`;
+    return [0, 0, 0];
   }
-  const pixel = getPixel(texture, x, y, textureSize);
-  return `rgb(${pixel[0]}, ${pixel[1]}, ${pixel[2]})`;
+  const pixel = getPixel(texture, x, y, textureSize, 4);
+  return pixel;
 };
 
-
 export const getColorByHeight = (height: number) => {
-    if (height <= waterLevel) {
-      const blue = height * 100 + 150;
-      const green = -Math.pow(height, 2) * 100 + 100;
-      return `rgb(0, ${green}, ${blue})`;
-    }
-    if (height < 0.5) {
-      const red = height * 127;
-      const green = -height * 127 + 127;
-      const blue = -height * 100 + 31;
-      return `rgb(${red}, ${green}, ${blue})`;
-    }
-  
-    const red = 31 + height * 63;
-    const green = 31 + height * 63;
-    const blue = height * 63;
+  if (height <= waterLevel) {
+    const blue = height * 100 + 150;
+    const green = -Math.pow(height, 2) * 100 + 100;
+    return `rgb(0, ${green}, ${blue})`;
+  }
+  if (height < 0.5) {
+    const red = height * 127;
+    const green = -height * 127 + 127;
+    const blue = -height * 100 + 31;
     return `rgb(${red}, ${green}, ${blue})`;
-  };
+  }
+
+  const red = 31 + height * 63;
+  const green = 31 + height * 63;
+  const blue = height * 63;
+  return `rgb(${red}, ${green}, ${blue})`;
+};

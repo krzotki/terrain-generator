@@ -1,6 +1,5 @@
 import React from "react";
 import * as BABYLON from "babylonjs";
-import * as Textures from 'babylonjs-procedural-textures';
 
 const createScene = function (
   engine: BABYLON.Engine,
