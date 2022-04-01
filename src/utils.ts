@@ -110,19 +110,11 @@ export const getColorFromTexture = (
 
 export const getColorByHeight = (height: number) => {
   if (height <= waterLevel) {
-    const blue = height * 100 + 150;
-    const green = -Math.pow(height, 2) * 100 + 100;
-    return `rgb(0, ${green}, ${blue})`;
+    return [255, 0, 0];
   }
-  if (height < 0.5) {
-    const red = height * 127;
-    const green = -height * 127 + 127;
-    const blue = -height * 100 + 31;
-    return `rgb(${red}, ${green}, ${blue})`;
+  if (height <= grassLevel) {
+    return [0, 255, 0];
   }
 
-  const red = 31 + height * 63;
-  const green = 31 + height * 63;
-  const blue = height * 63;
-  return `rgb(${red}, ${green}, ${blue})`;
+  return [0, 0, 255]
 };

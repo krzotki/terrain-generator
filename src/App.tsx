@@ -12,11 +12,12 @@ import {
   waterLevel,
   textureSize,
   drawPixel,
+  getColorByHeight,
 } from "./utils";
 
 const resolution = {
-  x: 4096,
-  y: 4096,
+  x: 1024,
+  y: 1024,
 };
 
 const grassTexture = new Image(textureSize, textureSize);
@@ -50,7 +51,7 @@ const generateNoise = (noiseCanvas: HTMLCanvasElement | null) => {
     return;
   }
 
-  const noiseSize = 0.003;
+  const noiseSize = 0.01;
 
   const width = noiseCanvas.width;
   const height = noiseCanvas.height;
@@ -101,6 +102,39 @@ const generateSpecular = (
   }
 
   specularCtx.putImageData(specularData, 0, 0);
+};
+
+const generateMixMap = (
+  mixMapCanvas: HTMLCanvasElement | null,
+  noiseCanvas: HTMLCanvasElement | null
+) => {
+  if (!noiseCanvas || !mixMapCanvas) {
+    return;
+  }
+
+  const noiseCtx = noiseCanvas.getContext("2d");
+
+  const mixMapCtx = mixMapCanvas.getContext("2d");
+  if (!noiseCtx || !mixMapCtx) {
+    return;
+  }
+
+  const width = mixMapCanvas.width;
+  const height = mixMapCanvas.height;
+
+  const noiseData = noiseCtx.getImageData(0, 0, width, height);
+  const mixMapData = new ImageData(width, height);
+
+  for (let x = 0; x < width; x++) {
+    for (let y = 0; y < height; y++) {
+      const pixel = getPixel(noiseData, x, y, width);
+      const val = pixel.reduce((prev, curr) => prev + curr, 0) / 3 / 255;
+
+      drawPixel(mixMapData, x, y, width, getColorByHeight(val));
+    }
+  }
+
+  mixMapCtx.putImageData(mixMapData, 0, 0);
 };
 
 const generateTexture = (
@@ -164,6 +198,7 @@ function App() {
   const noiseCanvasRef = useRef<HTMLCanvasElement>(null);
   const textureCanvasRef = useRef<HTMLCanvasElement>(null);
   const specularCanvasRef = useRef<HTMLCanvasElement>(null);
+  const mixMapRef = useRef<HTMLCanvasElement>(null);
 
   const babylonCanvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -235,6 +270,11 @@ function App() {
         height={resolution.y}
         ref={specularCanvasRef}
       ></canvas>
+       <canvas
+        width={resolution.x}
+        height={resolution.y}
+        ref={mixMapRef}
+      ></canvas>
       <canvas ref={babylonCanvasRef} className="babylonCanvas"></canvas>
       <div className="buttons">
         <button onClick={() => generateNoise(noiseCanvasRef.current)}>
@@ -255,6 +295,9 @@ function App() {
           Generate specular
         </button>
         <button onClick={generateTerrain}>Generate terrain</button>
+        <button onClick={() => generateMixMap(mixMapRef.current, noiseCanvasRef.current)}>
+          Generate mixMap
+        </button>
       </div>
     </div>
   );
