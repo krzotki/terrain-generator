@@ -13,11 +13,12 @@ import {
   textureSize,
   drawPixel,
   getColorByHeight,
+  dirtLevel,
 } from "./utils";
 
 const resolution = {
-  x: 1024,
-  y: 1024,
+  x: 2048,
+  y: 2048,
 };
 
 const grassTexture = new Image(textureSize, textureSize);
@@ -51,7 +52,7 @@ const generateNoise = (noiseCanvas: HTMLCanvasElement | null) => {
     return;
   }
 
-  const noiseSize = 0.01;
+  const noiseSize = 0.004;
 
   const width = noiseCanvas.width;
   const height = noiseCanvas.height;
@@ -128,12 +129,16 @@ const generateMixMap = (
   for (let x = 0; x < width; x++) {
     for (let y = 0; y < height; y++) {
       const pixel = getPixel(noiseData, x, y, width);
-      const val = pixel.reduce((prev, curr) => prev + curr, 0) / 3 / 255;
+      let val = pixel.reduce((prev, curr) => prev + curr, 0) / 3 / 255;
 
-      drawPixel(mixMapData, x, y, width, getColorByHeight(val));
+      // val += Math.random() * 0.05;
+      val += simplex.noise2D(x , y ) * 0.05;
+
+      const mixPixel = getColorByHeight(val);
+      drawPixel(mixMapData, x, y, width, mixPixel);
     }
   }
-
+  console.log(mixMapData);
   mixMapCtx.putImageData(mixMapData, 0, 0);
 };
 
@@ -270,7 +275,7 @@ function App() {
         height={resolution.y}
         ref={specularCanvasRef}
       ></canvas>
-       <canvas
+      <canvas
         width={resolution.x}
         height={resolution.y}
         ref={mixMapRef}
@@ -295,7 +300,11 @@ function App() {
           Generate specular
         </button>
         <button onClick={generateTerrain}>Generate terrain</button>
-        <button onClick={() => generateMixMap(mixMapRef.current, noiseCanvasRef.current)}>
+        <button
+          onClick={() =>
+            generateMixMap(mixMapRef.current, noiseCanvasRef.current)
+          }
+        >
           Generate mixMap
         </button>
       </div>

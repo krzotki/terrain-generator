@@ -1,10 +1,10 @@
 export const textureSize = 1024;
 
 export const waterLevel = 0.2;
-export const sandLevel = 0.3;
+export const sandLevel = 0.25;
 export const dryGrassLevel = 0.4;
 export const grassLevel = 0.6;
-export const dirtLevel = 0.85;
+export const dirtLevel = 0.8;
 export const rocksLevel = 1;
 
 export function getPixel(
@@ -45,7 +45,7 @@ export function drawPixel(
         imageData.data[red + k] = pixel[k];
       }
 
-      imageData.data[red + 3] = 255;
+      imageData.data[red + 3] = pixel[3] !== undefined ? pixel[3] : 255;
     }
   }
 }
@@ -109,12 +109,15 @@ export const getColorFromTexture = (
 };
 
 export const getColorByHeight = (height: number) => {
-  if (height <= waterLevel) {
-    return [255, 0, 0];
+  if (height <= sandLevel) {
+    return [255, 0, 0, 255];
   }
   if (height <= grassLevel) {
-    return [0, 255, 0];
+    return [0, 255, 0, 255];
+  }
+  if(height <= dirtLevel) {
+    return [0, 0, 255, 255]
   }
 
-  return [0, 0, 255]
+  return [0, 0, 0, 0]
 };
