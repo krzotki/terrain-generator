@@ -5,7 +5,7 @@ export enum MapEnum {
   GREEN_HILLS = "GREEN_HILLS",
   DESERT = "DESERT",
   CAVE = "CAVE",
-  SWAMP = 'SWAMP'
+  SWAMP = "SWAMP",
 }
 
 export type MapType = keyof typeof MapEnum;
@@ -31,7 +31,7 @@ const availableTextures = [
   "cave_ceiling",
   "swamp",
   "mossy_grass",
-  "moss"
+  "moss",
 ] as const;
 
 export const MapProperties: {
@@ -93,11 +93,11 @@ export const MapProperties: {
   },
   CAVE: {
     levels: [0.3, 0.6, 0.7],
-    minLevel: 0.25,
-    noiseSize: 0.15,
+    minLevel: 0.1,
+    noiseSize: 0.02,
     mixAmount: 0.2,
-    heightScale: 1.5,
-    noiseSampling: 16,
+    heightScale: 2,
+    noiseSampling: 2,
     textures: [
       {
         name: "cave_floor",
@@ -190,8 +190,10 @@ export const generateNoise = (
   for (let x = 0; x < width / sampling; x++) {
     for (let y = 0; y < height / sampling; y++) {
       let value = simplex.noise2D(x * noiseSize, y * noiseSize);
-      value = (Math.sin(value) + 1) / 2;
-
+      value = (Math.sin(value) + 0.9) / 2;
+      if (value >= 0.65) {
+        value = value * 1.25;
+      }
       if (value < minLevel) value = minLevel;
 
       const color = value * 255;
