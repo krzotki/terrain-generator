@@ -1,5 +1,5 @@
 import React from "react";
-import * as BABYLON from "babylonjs";
+import * as BABYLON from "@babylonjs/core/Legacy/legacy";
 
 const createScene = function (
   engine: BABYLON.Engine,

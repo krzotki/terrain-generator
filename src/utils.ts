@@ -1,87 +1,39 @@
-export const textureSize = 1024;
-
-export const waterLevel = 0.2;
-export const sandLevel = 0.25;
-export const dryGrassLevel = 0.4;
-export const grassLevel = 0.6;
-export const dirtLevel = 0.8;
-export const rocksLevel = 1;
 
 export function getPixel(
   imageData: ImageData,
   x: number,
   y: number,
-  width: number,
-  sample = 1
+  width: number
 ) {
-  const sum = [0, 0, 0];
+  const red = (y * (width * 4) + x * 4) % imageData.data.length;
 
-  for (let i = 1; i < 1 + sample; i++) {
-    for (let j = 1; j < 1 + sample; j++) {
-      const red = (y * i * (width * 4) + x * 4 * j) % imageData.data.length;
-
-      for (let k = 0; k < 3; k++) {
-        sum[k] += imageData.data[red + k];
-      }
-    }
-  }
-
-  return sum.map((v) => v / (sample * sample));
+  return [
+    imageData.data[red],
+    imageData.data[red + 1],
+    imageData.data[red + 2],
+  ];
 }
 
-export function drawPixel(
+export const drawPixel = (
   imageData: ImageData,
   x: number,
   y: number,
   width: number,
-  pixel: number[],
-  sample = 1
-) {
-  for (let i = 1; i < 1 + sample; i++) {
-    for (let j = 1; j < 1 + sample; j++) {
-      const red = (y * i * (width * 4) + x * 4 * j) % imageData.data.length;
-
-      for (let k = 0; k < 3; k++) {
-        imageData.data[red + k] = pixel[k];
-      }
-
-      imageData.data[red + 3] = pixel[3] !== undefined ? pixel[3] : 255;
-    }
-  }
-}
-
-export const getTextureByHeight = (
-  height: number,
-  x: number,
-  y: number,
-  textures: Array<ImageData | undefined>
+  pixel: number[]
 ) => {
-  if (height <= waterLevel) {
-    return getColorFromTexture(x, y, textures[0]);
-  }
-  if (height <= sandLevel) {
-    return getColorFromTexture(x, y, textures[1]);
-  }
-  if (height <= dryGrassLevel) {
-    return getColorFromTexture(x, y, textures[2]);
-  }
-  if (height <= grassLevel) {
-    return getColorFromTexture(x, y, textures[3]);
-  }
-  if (height <= dirtLevel) {
-    return getColorFromTexture(x, y, textures[4]);
-  }
-  if (height <= rocksLevel) {
-    return getColorFromTexture(x, y, textures[5]);
+  const red = (y * (width * 4) + x * 4) % imageData.data.length;
+
+  for (let k = 0; k < 3; k++) {
+    imageData.data[red + k] = pixel[k];
   }
 
-  return getColorFromTexture(x, y, textures[5]);
+  imageData.data[red + 3] = pixel[3] !== undefined ? pixel[3] : 255;
 };
 
-export const getImagePixels = (image: CanvasImageSource) => {
+export const getImagePixels = (image: ImageBitmap) => {
   const tempCanvas = document.createElement("canvas");
-  tempCanvas.width = textureSize;
-  tempCanvas.height = textureSize;
+  tempCanvas.width = image.width;
+  tempCanvas.height = image.height;
 
   const ctx = tempCanvas.getContext("2d");
   ctx?.drawImage(image, 0, 0);
@@ -96,28 +48,19 @@ export const getImagePixels = (image: CanvasImageSource) => {
   return imageData;
 };
 
-export const getColorFromTexture = (
-  x: number,
-  y: number,
-  texture: ImageData | undefined
+export const getColorByHeight = (
+  height: number,
+  levels: [number, number, number]
 ) => {
-  if (!texture) {
-    return [0, 0, 0];
-  }
-  const pixel = getPixel(texture, x, y, textureSize, 4);
-  return pixel;
-};
-
-export const getColorByHeight = (height: number) => {
-  if (height <= sandLevel) {
+  if (height <= levels[0]) {
     return [255, 0, 0, 255];
   }
-  if (height <= grassLevel) {
+  if (height <= levels[1]) {
     return [0, 255, 0, 255];
   }
-  if(height <= dirtLevel) {
-    return [0, 0, 255, 255]
+  if (height <= levels[2]) {
+    return [0, 0, 255, 255];
   }
 
-  return [0, 0, 0, 0]
+  return [0, 0, 0, 0];
 };

@@ -24,7 +24,7 @@ canvas.babylonCanvas {
   display: flex;
 }
 
-button {
+button, select {
   font-size: 1.25em;
   padding: 0.5em;
   margin: 0.5em;
