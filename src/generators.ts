@@ -43,14 +43,22 @@ export const MapProperties: {
     mixAmount?: number;
     heightScale?: number;
     noiseSampling?: number;
+    noiseFunc: (val: number) => number;
   };
 } = {
   GREEN_HILLS: {
-    levels: [0.25, 0.6, 0.75],
+    levels: [0.25, 0.7, 0.9],
     minLevel: 0.0,
     mixAmount: 0.2,
-    noiseSize: 0.006,
-    heightScale: 1.25,
+    noiseSize: 0.007,
+    heightScale: 2,
+    noiseFunc: (value) => {
+      value = (Math.sin(value) + 1) / 2;
+      if (value > 0.5) {
+        value += Math.exp(value / 5) - 1;
+      }
+      return value;
+    },
     textures: [
       {
         name: "sand",
@@ -72,6 +80,10 @@ export const MapProperties: {
     noiseSize: 0.006,
     mixAmount: 0.2,
     heightScale: 1.25,
+    noiseFunc: (value) => {
+      value = (Math.sin(value) + 1) / 2;
+      return value;
+    },
     textures: [
       {
         name: "dry_ground",
@@ -98,6 +110,13 @@ export const MapProperties: {
     mixAmount: 0.2,
     heightScale: 2,
     noiseSampling: 2,
+    noiseFunc: (value) => {
+      value = (Math.sin(value) + 0.9) / 2;
+      if (value >= 0.65) {
+        value = value * 1.25;
+      }
+      return value;
+    },
     textures: [
       {
         name: "cave_floor",
@@ -123,6 +142,10 @@ export const MapProperties: {
     mixAmount: 0.2,
     noiseSize: 0.006,
     heightScale: 1.25,
+    noiseFunc: (value) => {
+      value = (Math.sin(value) + 1) / 2;
+      return value;
+    },
     textures: [
       {
         name: "swamp",
@@ -160,22 +183,47 @@ export const generateNoise = (
 
   const simplex = new SimplexNoise();
 
-  const { noiseSize, minLevel, noiseSampling } = MapProperties[mapType];
+  const { noiseSize, minLevel, noiseSampling, noiseFunc } =
+    MapProperties[mapType];
 
   const width = noiseCanvas.width;
   const height = noiseCanvas.height;
 
   const sampling = noiseSampling || 1;
 
+  const addBorder = (x: number, y: number, value: number) => {
+    if (x < width * 0.1) {
+      const ratio = x / (width * 0.1);
+      value = 1 / Math.exp(ratio * 4) + value;
+    } else if (x > width * 0.9) {
+      const dist = width - width * 0.9;
+      const ratio = (width - x) / dist;
+      value = 1 / Math.exp(ratio * 4) + value;
+    }
+
+    if (y < height * 0.1) {
+      const ratio = y / (height * 0.1);
+      value = 1 / Math.exp(ratio * 4) + value;
+    } else if (y > height * 0.9) {
+      const dist = height - height * 0.9;
+      const ratio = (height - y) / dist;
+      value = 1 / Math.exp(ratio * 4) + value;
+    }
+
+    return value;
+  };
+
   if (sampling === 1) {
     const noiseData = noiseCtx.getImageData(0, 0, width, height);
     for (let x = 0; x < width; x++) {
       for (let y = 0; y < height; y++) {
         let value = simplex.noise2D(x * noiseSize, y * noiseSize);
-        value = (Math.sin(value) + 1) / 2;
+        value = noiseFunc(value);
+
+        value = addBorder(x, y, value);
 
         if (value < minLevel) value = minLevel;
-
+        
         const color = value * 255;
 
         drawPixel(noiseData, x, y, width, [color, color, color]);
@@ -190,10 +238,10 @@ export const generateNoise = (
   for (let x = 0; x < width / sampling; x++) {
     for (let y = 0; y < height / sampling; y++) {
       let value = simplex.noise2D(x * noiseSize, y * noiseSize);
-      value = (Math.sin(value) + 0.9) / 2;
-      if (value >= 0.65) {
-        value = value * 1.25;
-      }
+
+      value = noiseFunc(value);
+      value = addBorder(x, y, value);
+
       if (value < minLevel) value = minLevel;
 
       const color = value * 255;
