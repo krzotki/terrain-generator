@@ -140,11 +140,13 @@ function App() {
       const cx = ratioX * resolution.x;
       const cy = ratioY * resolution.y;
 
+      const scale = rect.width / resolution.x;
+
       const color = 255 * noiseLevel;
       const rgb = `rgb(${color}, ${color}, ${color})`;
 
       ctx.beginPath();
-      ctx.arc(cx, cy, brushSize * 2, 0, 2 * Math.PI, false);
+      ctx.arc(cx, cy, brushSize / scale / 2, 0, 2 * Math.PI, false);
       ctx.fillStyle = rgb;
       ctx.fill();
     }
