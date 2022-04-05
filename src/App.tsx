@@ -171,7 +171,9 @@ function App() {
           setDrawing(false);
         }}
         onMouseMove={(evt) => moveBrush(evt)}
-        onMouseDown={() => setDrawing(true)}
+        onMouseDown={(evt) => {
+          if(evt.button === 0) setDrawing(true)
+        }}
         onMouseUp={() => setDrawing(false)}
       ></canvas>
       <canvas
