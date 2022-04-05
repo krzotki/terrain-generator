@@ -240,7 +240,7 @@ export const generateNoise = (
       let value = simplex.noise2D(x * noiseSize, y * noiseSize);
 
       value = noiseFunc(value);
-      value = addBorder(x, y, value);
+      value = addBorder(x * sampling, y * sampling, value);
 
       if (value < minLevel) value = minLevel;
 
