@@ -11,6 +11,7 @@ import {
   MapProperties,
   MapType,
 } from "./generators";
+import Options from "./Options";
 
 const resolution = {
   x: 1024,
@@ -37,7 +38,7 @@ function App() {
       if (ground) {
         ground.dispose();
       }
-      const { textures,  heightScale } = MapProperties[mapType];
+      const { textures, heightScale } = MapProperties[mapType];
 
       const newGround = BABYLON.MeshBuilder.CreateGroundFromHeightMap(
         "gdhm",
@@ -52,7 +53,6 @@ function App() {
       );
 
       console.log("GENERATE TERRAIN FOR ", mapType);
-
 
       const terrainMaterial = new MixMaterial("terrainMaterial", gameScene);
       terrainMaterial.specularColor = new BABYLON.Color3(0.5, 0.5, 0.5);
@@ -93,46 +93,135 @@ function App() {
     }
   }, [noiseCanvasRef, mixMapCanvasRef, gameScene, ground, mapType]);
 
+  const loadImage = React.useCallback((evt: any) => {
+    if (!evt || !evt.target) return;
+    const image = new Image();
+    image.onload = () => {
+      const ctx = noiseCanvasRef.current?.getContext("2d");
+      ctx?.drawImage(image, 0, 0);
+    };
+    image.src = URL.createObjectURL(evt.target.files[0]);
+  }, [noiseCanvasRef])
+
+  const [noiseLevel, setNoiseLevel] = React.useState<number>(0.5);
+  const [brushSize, setBrushSize] = React.useState<number>(10);
+  const [brushHidden, setBrushHidden] = React.useState(true);
+  const [drawing, setDrawing] = React.useState(false);
+
+  const brushRef = React.useRef<HTMLDivElement>(null);
+
+ 
+  React.useEffect(() => {
+    const color = 255 * noiseLevel;
+    const rgb = `rgb(${color}, ${color}, ${color})`;
+
+    if(!brushRef.current) return;
+    brushRef.current.style.backgroundColor = rgb;
+    brushRef.current.style.width = `${brushSize}px`;
+    brushRef.current.style.height = `${brushSize}px`;
+  }, [noiseLevel, brushSize])
+
+  const moveBrush = React.useCallback((evt: any) => {
+    if (!brushRef.current) return;
+    brushRef.current.style.left = `${evt.clientX}px`;
+    brushRef.current.style.top = `${evt.clientY}px`;
+
+    if (drawing) {
+      const ctx = noiseCanvasRef.current?.getContext("2d");
+      const rect = noiseCanvasRef.current?.getBoundingClientRect();
+      if (!ctx || !rect) return;
+
+      const x = evt.clientX;
+      const y = evt.clientY;
+
+      const ratioX = x / rect.width;
+      const ratioY = y / rect.height;
+
+      const cx = ratioX * resolution.x;
+      const cy = ratioY * resolution.y;
+
+      const color = 255 * noiseLevel;
+      const rgb = `rgb(${color}, ${color}, ${color})`;
+
+      ctx.beginPath();
+      ctx.arc(cx, cy, brushSize * 2, 0, 2 * Math.PI, false);
+      ctx.fillStyle = rgb;
+      ctx.fill();
+    }
+  }, [brushRef, drawing, noiseLevel, brushSize])
+
+  const clearNoise = React.useCallback(() => {
+    const canvas = noiseCanvasRef.current;
+    if(!canvas) return;
+    const {width, height} = canvas;
+    canvas.getContext('2d')?.clearRect(0, 0, width, height);
+  }, [noiseCanvasRef])
+
   return (
     <div className="App">
       <canvas
         width={resolution.x}
         height={resolution.y}
         ref={noiseCanvasRef}
+        onMouseEnter={() => setBrushHidden(false)}
+        onMouseLeave={() => {
+          setBrushHidden(true);
+          setDrawing(false);
+        }}
+        onMouseMove={(evt) => moveBrush(evt)}
+        onMouseDown={() => setDrawing(true)}
+        onMouseUp={() => setDrawing(false)}
       ></canvas>
       <canvas
         width={resolution.x}
         height={resolution.y}
         ref={mixMapCanvasRef}
       ></canvas>
-      <canvas ref={babylonCanvasRef} className="babylonCanvas"></canvas>
-      <div className="buttons">
-        <select onChange={(ev) => setMapType(ev.target.value as MapType)}>
-          {Object.keys(MapEnum).map((t) => (
-            <option value={t} key={t}>
-              {t}
-            </option>
-          ))}
-        </select>
-        <button onClick={() => generateNoise(noiseCanvasRef.current, mapType)}>
-          Generate noise
-        </button>
-        <button
-          onClick={() =>
-            generateMixMap(
-              mixMapCanvasRef.current,
-              noiseCanvasRef.current,
-              mapType
-            )
-          }
-        >
-          Generate mixMap
-        </button>
-        <button onClick={() => blurMixMap(mixMapCanvasRef.current)}>
-          Blur mixMap
-        </button>
-        <button onClick={generateTerrain}>Generate terrain</button>
+      <div className="drawer">
+        <div
+          ref={brushRef}
+          className={`brush ${brushHidden ? "hidden" : ""}`}
+        ></div>
+        <p>Draw noise</p>
+        <div className="d-flex w-100 align-items-center justify-content-center">
+          <label className="m-3 w-50" htmlFor="noiseLevel">
+            Noise level: <strong>{noiseLevel}</strong>
+          </label>
+          <input
+            id="noiseLevel"
+            type="range"
+            min={0}
+            max={1}
+            step={0.05}
+            value={noiseLevel}
+            onChange={(evt) => setNoiseLevel(Number(evt.target.value))}
+          />
+        </div>
+        <div className="d-flex w-100 align-items-center justify-content-center">
+          <label className="m-3 w-50" htmlFor="brushSize">
+            Brush size: <strong>{brushSize}</strong>
+          </label>
+          <input
+            id="brushSize"
+            type="range"
+            min={1}
+            max={50}
+            step={1}
+            value={brushSize}
+            onChange={(evt) => setBrushSize(Number(evt.target.value))}
+          />
+        </div>
       </div>
+      <canvas ref={babylonCanvasRef} className="babylonCanvas"></canvas>
+      <Options
+        generateTerrain={generateTerrain}
+        loadImage={loadImage}
+        mapType={mapType}
+        mixMapCanvasRef={mixMapCanvasRef}
+        noiseCanvasRef={noiseCanvasRef}
+        setMapType={setMapType}
+        clearNoise={clearNoise}
+      />
     </div>
   );
 }

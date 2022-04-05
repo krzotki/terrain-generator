@@ -1,9 +1,16 @@
-canvas {
+canvas, .drawer {
   border: solid 1px;
   box-sizing: border-box;
   width: 25%;
   max-height: 50%;
   height: auto;
+  float: left;
+}
+
+.drawer {
+  float: right;
+  padding: 0.5em;
+  min-height: 200px;
 }
 
 canvas.babylonCanvas {
@@ -17,6 +24,7 @@ canvas.babylonCanvas {
   height: 100%;
 }
 
+
 .buttons {
   position: absolute;
   bottom: 0;
@@ -24,8 +32,30 @@ canvas.babylonCanvas {
   display: flex;
 }
 
-button, select {
-  font-size: 1.25em;
+button, select, .load-file {
+  font-size: 1em;
   padding: 0.5em;
   margin: 0.5em;
+}
+
+.load-file {
+  background-color: #fff;
+}
+
+.load-file input {
+  margin: 0 1em;
+}
+
+.hidden {
+  display: none;
+}
+
+.brush {
+  position: fixed;
+  width: 50px;
+  height: 50px;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  border-radius: 50%;
+  background-color: black;
 }
