@@ -32,6 +32,7 @@ const availableTextures = [
   "swamp",
   "mossy_grass",
   "moss",
+  "mesa"
 ] as const;
 
 export const MapProperties: {
@@ -75,13 +76,19 @@ export const MapProperties: {
     ],
   },
   DESERT: {
-    levels: [0.25, 0.6, 0.8],
-    minLevel: 0.2,
-    noiseSize: 0.006,
+    levels: [0.25, 0.4, 0.55],
+    minLevel: 0.0,
+    noiseSize: 0.007,
     mixAmount: 0.2,
     heightScale: 1.25,
     noiseFunc: (value) => {
       value = (Math.sin(value) + 1) / 2;
+      if (value >= 0.55) {
+        value = Math.exp(value - 0.6);
+        if(value >= 1) {
+          value = 1 - Math.random() * 0.1;
+        }
+      }
       return value;
     },
     textures: [
@@ -98,7 +105,7 @@ export const MapProperties: {
         uv: 25,
       },
       {
-        name: "sand",
+        name: "mesa",
         uv: 25,
       },
     ],
