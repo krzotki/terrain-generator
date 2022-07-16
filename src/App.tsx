@@ -18,6 +18,8 @@ const resolution = {
   y: 1024,
 };
 
+const mapSize = 50;
+
 function App() {
   const noiseCanvasRef = useRef<HTMLCanvasElement>(null);
   const mixMapCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -35,23 +37,23 @@ function App() {
       const heightUrl = noiseCanvasRef.current.toDataURL("image/png");
       const mixMapUrl = mixMapCanvasRef.current.toDataURL("image/png");
 
-      if (ground) {
-        ground.dispose();
-      }
+     
       const { textures, heightScale } = MapProperties[mapType];
 
       const newGround = BABYLON.MeshBuilder.CreateGroundFromHeightMap(
         "gdhm",
         heightUrl,
         {
-          width: 50,
-          height: 50,
+          width: mapSize,
+          height: mapSize,
           subdivisions: 100,
           maxHeight: 2 * (heightScale || 1),
           minHeight: 0,
-        }
+        },
+        gameScene
       );
 
+      newGround.enablePointerMoveEvents = true;
       console.log("GENERATE TERRAIN FOR ", mapType);
 
       const terrainMaterial = new MixMaterial("terrainMaterial", gameScene);
@@ -89,19 +91,25 @@ function App() {
         terrainMaterial.diffuseTexture4.vScale = textures[3].uv || 50;
 
       newGround.material = terrainMaterial;
+      if (ground) {
+        ground.dispose();
+      }
       setGround(newGround);
     }
   }, [noiseCanvasRef, mixMapCanvasRef, gameScene, ground, mapType]);
 
-  const loadImage = React.useCallback((evt: any) => {
-    if (!evt || !evt.target) return;
-    const image = new Image();
-    image.onload = () => {
-      const ctx = noiseCanvasRef.current?.getContext("2d");
-      ctx?.drawImage(image, 0, 0);
-    };
-    image.src = URL.createObjectURL(evt.target.files[0]);
-  }, [noiseCanvasRef])
+  const loadImage = React.useCallback(
+    (evt: any) => {
+      if (!evt || !evt.target) return;
+      const image = new Image();
+      image.onload = () => {
+        const ctx = noiseCanvasRef.current?.getContext("2d");
+        ctx?.drawImage(image, 0, 0);
+      };
+      image.src = URL.createObjectURL(evt.target.files[0]);
+    },
+    [noiseCanvasRef]
+  );
 
   const [noiseLevel, setNoiseLevel] = React.useState<number>(0.5);
   const [brushSize, setBrushSize] = React.useState<number>(10);
@@ -110,29 +118,28 @@ function App() {
 
   const brushRef = React.useRef<HTMLDivElement>(null);
 
- 
   React.useEffect(() => {
     const color = 255 * noiseLevel;
     const rgb = `rgb(${color}, ${color}, ${color})`;
 
-    if(!brushRef.current) return;
+    if (!brushRef.current) return;
     brushRef.current.style.backgroundColor = rgb;
     brushRef.current.style.width = `${brushSize}px`;
     brushRef.current.style.height = `${brushSize}px`;
-  }, [noiseLevel, brushSize])
+  }, [noiseLevel, brushSize]);
 
-  const moveBrush = React.useCallback((evt: any) => {
-    if (!brushRef.current) return;
-    brushRef.current.style.left = `${evt.clientX}px`;
-    brushRef.current.style.top = `${evt.clientY}px`;
-
-    if (drawing) {
+  const drawOnTerrain = React.useCallback(
+    (x: number, y: number) => {
       const ctx = noiseCanvasRef.current?.getContext("2d");
-      const rect = noiseCanvasRef.current?.getBoundingClientRect();
-      if (!ctx || !rect) return;
+      const color = 255 * noiseLevel;
+      const rgb = `rgb(${color}, ${color}, ${color})`;
 
-      const x = evt.clientX;
-      const y = evt.clientY;
+      if (!ctx) {
+        return;
+      }
+
+      const rect = noiseCanvasRef.current?.getBoundingClientRect();
+      if (!rect) return;
 
       const ratioX = x / rect.width;
       const ratioY = y / rect.height;
@@ -142,26 +149,101 @@ function App() {
 
       const scale = rect.width / resolution.x;
 
-      const color = 255 * noiseLevel;
-      const rgb = `rgb(${color}, ${color}, ${color})`;
-
       ctx.beginPath();
       ctx.arc(cx, cy, brushSize / scale / 2, 0, 2 * Math.PI, false);
       ctx.fillStyle = rgb;
       ctx.fill();
+    },
+    [noiseCanvasRef, noiseLevel, brushSize]
+  );
+
+  React.useEffect(() => {
+    if (gameScene) {
+      let hasBeenDrawing = false;
+      let drawing = false;
+      const observer = gameScene.onPointerObservable.add((evt) => {
+        if (
+          evt.type === BABYLON.PointerEventTypes.POINTERDOWN &&
+          evt.event.button === 0
+        ) {
+          drawing = true;
+        }
+
+        if (evt.type === BABYLON.PointerEventTypes.POINTERUP) {
+          drawing = false;
+          if (hasBeenDrawing) {
+            generateMixMap(
+              mixMapCanvasRef.current,
+              noiseCanvasRef.current,
+              mapType
+            );
+            generateTerrain();
+          }
+
+          hasBeenDrawing = false;
+        }
+
+        if (evt.type === BABYLON.PointerEventTypes.POINTERMOVE && drawing) {
+          hasBeenDrawing = true;
+          const position = evt.pickInfo?.pickedPoint;
+
+          if (!position) {
+            return;
+          }
+
+          let { x, y } = new BABYLON.Vector2(
+            position.x / mapSize + 0.5,
+            -position.z / mapSize + 0.5
+          );
+
+          const rect = noiseCanvasRef.current?.getBoundingClientRect();
+          if (!rect) return;
+
+          drawOnTerrain(x * rect.width, y * rect.height);
+        }
+      });
+
+      return () => {
+        gameScene.onPointerObservable.remove(observer);
+      };
     }
-  }, [brushRef, drawing, noiseLevel, brushSize])
+  }, [
+    gameScene,
+    noiseCanvasRef,
+    drawOnTerrain,
+    mixMapCanvasRef,
+    mapType,
+    generateTerrain,
+    brushSize,
+  ]);
+
+  const moveBrush = React.useCallback(
+    (evt: any) => {
+      if (!brushRef.current) return;
+      brushRef.current.style.left = `${evt.clientX}px`;
+      brushRef.current.style.top = `${evt.clientY}px`;
+
+      if (drawing) {
+        const x = evt.clientX;
+        const y = evt.clientY;
+
+        drawOnTerrain(x, y);
+      }
+    },
+    [brushRef, drawing, drawOnTerrain]
+  );
 
   const clearNoise = React.useCallback(() => {
     const canvas = noiseCanvasRef.current;
-    if(!canvas) return;
-    const {width, height} = canvas;
-    canvas.getContext('2d')?.clearRect(0, 0, width, height);
-  }, [noiseCanvasRef])
+    if (!canvas) return;
+    const { width, height } = canvas;
+    canvas.getContext("2d")?.clearRect(0, 0, width, height);
+  }, [noiseCanvasRef]);
 
   return (
     <div className="App">
       <canvas
+        className="drawing-canvas"
         width={resolution.x}
         height={resolution.y}
         ref={noiseCanvasRef}
@@ -172,7 +254,7 @@ function App() {
         }}
         onMouseMove={(evt) => moveBrush(evt)}
         onMouseDown={(evt) => {
-          if(evt.button === 0) setDrawing(true)
+          if (evt.button === 0) setDrawing(true);
         }}
         onMouseUp={() => setDrawing(false)}
       ></canvas>
