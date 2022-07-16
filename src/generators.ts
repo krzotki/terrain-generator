@@ -299,7 +299,7 @@ export const generateMixMap = (
   mixMapCtx.putImageData(mixMapData, 0, 0);
 };
 
-export const blurMixMap = (canvas: HTMLCanvasElement | null) => {
+export const blurMixMap = (canvas: HTMLCanvasElement | null, amount = 2) => {
   if (!canvas) return;
 
   const url = canvas.toDataURL("image/png");
@@ -308,7 +308,7 @@ export const blurMixMap = (canvas: HTMLCanvasElement | null) => {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    ctx.filter = "blur(2px)";
+    ctx.filter =  `blur(${amount}px)`;
     ctx.drawImage(image, 0, 0);
   };
   image.src = url;

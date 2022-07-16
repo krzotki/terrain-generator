@@ -25,7 +25,7 @@ export default function Options({
   mixMapCanvasRef,
   generateTerrain,
   loadImage,
-  clearNoise
+  clearNoise,
 }: PropsType) {
   return (
     <div className="buttons">
@@ -50,7 +50,10 @@ export default function Options({
       >
         Generate mixMap
       </Button>
-      <Button onClick={() => blurMixMap(mixMapCanvasRef.current)}>
+      <Button onClick={() => blurMixMap(noiseCanvasRef.current)}>
+        Blur noise
+      </Button>
+      <Button onClick={() => blurMixMap(mixMapCanvasRef.current, 10)}>
         Blur mixMap
       </Button>
       <Button onClick={generateTerrain}>Generate terrain</Button>
