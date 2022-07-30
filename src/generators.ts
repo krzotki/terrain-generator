@@ -32,7 +32,7 @@ const availableTextures = [
   "swamp",
   "mossy_grass",
   "moss",
-  "mesa"
+  "mesa",
 ] as const;
 
 export const MapProperties: {
@@ -85,7 +85,7 @@ export const MapProperties: {
       value = (Math.sin(value) + 1) / 2;
       if (value >= 0.55) {
         value = Math.exp(value - 0.6);
-        if(value >= 1) {
+        if (value >= 1) {
           value = 1 - Math.random() * 0.1;
         }
       }
@@ -174,6 +174,8 @@ export const MapProperties: {
   },
 };
 
+const simplex = new SimplexNoise();
+
 export const generateNoise = (
   noiseCanvas: HTMLCanvasElement | null,
   mapType: MapType
@@ -230,7 +232,7 @@ export const generateNoise = (
         value = addBorder(x, y, value);
 
         if (value < minLevel) value = minLevel;
-        
+
         const color = value * 255;
 
         drawPixel(noiseData, x, y, width, [color, color, color]);
@@ -276,8 +278,6 @@ export const generateMixMap = (
 
   const { levels, mixAmount } = MapProperties[mapType];
 
-  const simplex = new SimplexNoise();
-
   const width = mixMapCanvas.width;
   const height = mixMapCanvas.height;
 
@@ -308,7 +308,7 @@ export const blurMixMap = (canvas: HTMLCanvasElement | null, amount = 2) => {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    ctx.filter =  `blur(${amount}px)`;
+    ctx.filter = `blur(${amount}px)`;
     ctx.drawImage(image, 0, 0);
   };
   image.src = url;

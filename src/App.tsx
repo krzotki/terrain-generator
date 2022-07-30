@@ -3,10 +3,7 @@ import "./App.css";
 import { useGameEngine } from "./useGameEngine";
 import * as BABYLON from "@babylonjs/core/Legacy/legacy";
 import { MixMaterial } from "@babylonjs/materials";
-import {
-  MapProperties,
-  MapType,
-} from "./generators";
+import { MapProperties, MapType } from "./generators";
 import Options from "./Options";
 import { useDrawingOnTerrain } from "./useDrawingOnTerrain";
 
@@ -44,6 +41,7 @@ function App() {
   } = useDrawingOnTerrain({
     gameScene,
     noiseCanvasRef,
+    mixMapCanvasRef,
     ground,
     mapType,
   });
@@ -71,7 +69,9 @@ function App() {
       newGround.enablePointerMoveEvents = true;
       console.log("GENERATE TERRAIN FOR ", mapType);
 
-      const terrainMaterial = new MixMaterial("terrainMaterial", gameScene);
+      const terrainMaterial =
+        (gameScene.getMaterialByName("terrainMaterial") as MixMaterial) ||
+        new MixMaterial("terrainMaterial", gameScene);
       terrainMaterial.specularColor = new BABYLON.Color3(0.5, 0.5, 0.5);
       terrainMaterial.specularPower = 64;
       terrainMaterial.mixTexture1 = new BABYLON.Texture(mixMapUrl, gameScene);

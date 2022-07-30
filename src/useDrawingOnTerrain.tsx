@@ -1,12 +1,14 @@
 import React from "react";
 import * as BABYLON from "@babylonjs/core/Legacy/legacy";
 import { getImageBinary } from "./utils";
-import { MapProperties, MapType } from "./generators";
+import { generateMixMap, MapProperties, MapType } from "./generators";
 import { MAP_SIZE, RESOLUTION, SUBDIVISIONS } from "./App";
+import { MixMaterial } from "@babylonjs/materials";
 
 type PropsType = {
   gameScene: BABYLON.Scene | null | undefined;
   noiseCanvasRef: React.RefObject<HTMLCanvasElement>;
+  mixMapCanvasRef: React.RefObject<HTMLCanvasElement>;
   ground: BABYLON.GroundMesh | undefined;
   mapType: MapType;
 };
@@ -14,6 +16,7 @@ type PropsType = {
 export const useDrawingOnTerrain = ({
   gameScene,
   noiseCanvasRef,
+  mixMapCanvasRef,
   ground,
   mapType,
 }: PropsType) => {
@@ -108,11 +111,39 @@ export const useDrawingOnTerrain = ({
 
         if (evt.type === BABYLON.PointerEventTypes.POINTERUP) {
           drawing = false;
-          if (hasBeenDrawing && noiseCanvasRef.current) {
+          if (
+            hasBeenDrawing &&
+            noiseCanvasRef.current &&
+            mixMapCanvasRef.current
+          ) {
             const binary = getImageBinary(noiseCanvasRef.current, RESOLUTION);
             if (!binary) {
               return;
             }
+
+            generateMixMap(
+              mixMapCanvasRef.current,
+              noiseCanvasRef.current,
+              mapType
+            );
+
+            const currentMaterial = gameScene.getMaterialByName(
+              "terrainMaterial"
+            ) as MixMaterial;
+            if (currentMaterial) {
+              // const mixMapUrl = mixMapCanvasRef.current.toDataURL("image/png");
+              currentMaterial.mixTexture1.dispose();
+              const rawTexture = BABYLON.RawTexture.CreateRGBATexture(
+                getImageBinary(mixMapCanvasRef.current, RESOLUTION),
+                RESOLUTION.x,
+                RESOLUTION.y,
+                gameScene,
+                undefined,
+                true
+              );
+              currentMaterial.mixTexture1 = rawTexture;
+            }
+
             updateTerrain(binary);
           }
 
@@ -144,6 +175,7 @@ export const useDrawingOnTerrain = ({
           if (!binary) {
             return;
           }
+
           updateTerrain(binary);
         }
       });
@@ -152,7 +184,15 @@ export const useDrawingOnTerrain = ({
         gameScene.onPointerObservable.remove(observer);
       };
     }
-  }, [gameScene, noiseCanvasRef, drawOnTerrain, brushSize, updateTerrain]);
+  }, [
+    mapType,
+    gameScene,
+    noiseCanvasRef,
+    drawOnTerrain,
+    brushSize,
+    updateTerrain,
+    mixMapCanvasRef,
+  ]);
 
   const moveBrush = React.useCallback(
     (evt: any) => {
