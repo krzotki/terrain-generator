@@ -1,4 +1,3 @@
-
 export function getPixel(
   imageData: ImageData,
   x: number,
@@ -63,4 +62,28 @@ export const getColorByHeight = (
   }
 
   return [0, 0, 0, 0];
+};
+
+export const getImageBinary = (
+  canvas: HTMLCanvasElement | null | undefined,
+  resolution: { x: number; y: number }
+) => {
+  if (!canvas) {
+    return null;
+  }
+  const ctx = canvas
+    .getContext("2d")
+    ?.getImageData(0, 0, resolution.x, resolution.y);
+
+  if (!ctx) {
+    return null;
+  }
+  const data = ctx.data;
+  const buffer = new ArrayBuffer(data.length);
+  const binary = new Uint8Array(buffer);
+  for (let i = 0; i < binary.length; i++) {
+    binary[i] = data[i];
+  }
+
+  return binary;
 };
