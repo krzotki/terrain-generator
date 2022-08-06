@@ -6,6 +6,7 @@ import { MixMaterial } from "@babylonjs/materials";
 import { MapProperties, MapType } from "./generators";
 import Options from "./Options";
 import { useDrawingOnTerrain } from "./useDrawingOnTerrain";
+import { DrawOptions } from "./DrawOptions";
 
 export const RESOLUTION = {
   x: 1024,
@@ -29,15 +30,19 @@ function App() {
   const [ground, setGround] = useState<BABYLON.GroundMesh>();
 
   const {
+    setDrawing,
+    moveBrush,
+    setBrushHidden,
     brushHidden,
     brushSize,
-    moveBrush,
     noiseLevel,
-    setBrushHidden,
     setBrushSize,
-    setDrawing,
     setNoiseLevel,
     brushRef,
+    fillMode,
+    setFillmode,
+    setSlope,
+    slope
   } = useDrawingOnTerrain({
     gameScene,
     noiseCanvasRef,
@@ -157,41 +162,18 @@ function App() {
         height={RESOLUTION.y}
         ref={mixMapCanvasRef}
       ></canvas>
-      <div className="drawer">
-        <div
-          ref={brushRef}
-          className={`brush ${brushHidden ? "hidden" : ""}`}
-        ></div>
-        <p>Draw noise</p>
-        <div className="d-flex w-100 align-items-center justify-content-center">
-          <label className="m-3 w-50" htmlFor="noiseLevel">
-            Noise level: <strong>{noiseLevel}</strong>
-          </label>
-          <input
-            id="noiseLevel"
-            type="range"
-            min={0}
-            max={1}
-            step={0.05}
-            value={noiseLevel}
-            onChange={(evt) => setNoiseLevel(Number(evt.target.value))}
-          />
-        </div>
-        <div className="d-flex w-100 align-items-center justify-content-center">
-          <label className="m-3 w-50" htmlFor="brushSize">
-            Brush size: <strong>{brushSize}</strong>
-          </label>
-          <input
-            id="brushSize"
-            type="range"
-            min={1}
-            max={50}
-            step={1}
-            value={brushSize}
-            onChange={(evt) => setBrushSize(Number(evt.target.value))}
-          />
-        </div>
-      </div>
+      <DrawOptions
+        brushHidden={brushHidden}
+        brushRef={brushRef}
+        brushSize={brushSize}
+        noiseLevel={noiseLevel}
+        setBrushSize={setBrushSize}
+        setNoiseLevel={setNoiseLevel}
+        fillMode={fillMode}
+        setFillMode={setFillmode}
+        setSlope={setSlope}
+        slope={slope}
+      />
       <canvas ref={babylonCanvasRef} className="babylonCanvas"></canvas>
       <Options
         generateTerrain={generateTerrain}

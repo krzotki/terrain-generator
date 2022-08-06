@@ -3,6 +3,7 @@ import * as BABYLON from "@babylonjs/core/Legacy/legacy";
 import { getImageBinary } from "./utils";
 import {
   fillMixMapCircle,
+  fillNoiseCircle,
   generateMixMap,
   MapProperties,
   MapType,
@@ -18,6 +19,8 @@ type PropsType = {
   mapType: MapType;
 };
 
+export type FillMode = "flat" | "add";
+
 export const useDrawingOnTerrain = ({
   gameScene,
   noiseCanvasRef,
@@ -26,9 +29,11 @@ export const useDrawingOnTerrain = ({
   mapType,
 }: PropsType) => {
   const [noiseLevel, setNoiseLevel] = React.useState<number>(0.5);
+  const [slope, setSlope] = React.useState<number>(0.5);
   const [brushSize, setBrushSize] = React.useState<number>(10);
   const [brushHidden, setBrushHidden] = React.useState(true);
   const [drawing, setDrawing] = React.useState(false);
+  const [fillMode, setFillmode] = React.useState<FillMode>("flat");
 
   const brushRef = React.useRef<HTMLDivElement>(null);
 
@@ -64,7 +69,7 @@ export const useDrawingOnTerrain = ({
   );
 
   const updateMixMap = React.useCallback(() => {
-    if(!gameScene) {
+    if (!gameScene) {
       return;
     }
 
@@ -116,21 +121,45 @@ export const useDrawingOnTerrain = ({
       const cy = ratioY * RESOLUTION.y;
 
       const scale = rect.width / RESOLUTION.x;
-      const radius = brushSize / scale / 2
+      const radius = brushSize / scale / 2;
 
-      ctx.beginPath();
-      ctx.arc(cx, cy, radius, 0, 2 * Math.PI, false);
-      ctx.fillStyle = rgb;
-      ctx.fill();
+      // ctx.beginPath();
+      // ctx.arc(cx, cy, radius, 0, 2 * Math.PI, false);
+      // ctx.fillStyle = rgb;
+      // ctx.fill();
 
+      fillNoiseCircle(
+        noiseCanvasRef.current,
+        {
+          x: cx - radius,
+          y: cy - radius,
+          radius,
+        },
+        fillMode,
+        slope,
+        color
+      );
 
-      fillMixMapCircle(mixMapCanvasRef.current, noiseCanvasRef.current, mapType, {
-        x: cx - radius,
-        y: cy - radius,
-        radius
-      });
+      fillMixMapCircle(
+        mixMapCanvasRef.current,
+        noiseCanvasRef.current,
+        mapType,
+        {
+          x: cx - radius,
+          y: cy - radius,
+          radius,
+        }
+      );
     },
-    [noiseCanvasRef, noiseLevel, brushSize, mapType, mixMapCanvasRef]
+    [
+      noiseCanvasRef,
+      noiseLevel,
+      brushSize,
+      mapType,
+      mixMapCanvasRef,
+      fillMode,
+      slope,
+    ]
   );
 
   React.useEffect(() => {
@@ -207,7 +236,7 @@ export const useDrawingOnTerrain = ({
     brushSize,
     updateTerrain,
     mixMapCanvasRef,
-    updateMixMap
+    updateMixMap,
   ]);
 
   const moveBrush = React.useCallback(
@@ -237,5 +266,9 @@ export const useDrawingOnTerrain = ({
     drawing,
     setDrawing,
     brushRef,
+    fillMode,
+    setFillmode,
+    slope,
+    setSlope,
   };
 };

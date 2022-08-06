@@ -1,4 +1,5 @@
 import SimplexNoise from "simplex-noise";
+import { FillMode } from "./useDrawingOnTerrain";
 import { drawPixel, getColorByHeight, getPixel } from "./utils";
 
 export enum MapEnum {
@@ -290,7 +291,7 @@ export const generateMixMap = (
       let val = pixel.reduce((prev, curr) => prev + curr, 0) / 3 / 255;
 
       // val += Math.random() * 0.05;
-      val += simplex.noise2D(x, y) * (mixAmount || 0.05);
+      // val += simplex.noise2D(x, y) * (mixAmount || 0.05);
 
       const mixPixel = getColorByHeight(val, levels);
       drawPixel(mixMapData, x, y, width, mixPixel);
@@ -343,6 +344,54 @@ export const fillMixMapCircle = (
     }
   }
   mixMapCtx.putImageData(mixMapData, x, y);
+};
+
+export const fillNoiseCircle = (
+  noiseCanvas: HTMLCanvasElement | null,
+  circle: {
+    x: number;
+    y: number;
+    radius: number;
+  },
+  fillMode: FillMode,
+  slope: number,
+  level: number
+) => {
+  if (!noiseCanvas) {
+    return;
+  }
+
+  const noiseCtx = noiseCanvas.getContext("2d");
+
+  if (!noiseCtx) {
+    return;
+  }
+
+  let { x, y, radius } = circle;
+
+  const size = Math.floor(radius * 2);
+
+  const noiseData = noiseCtx.getImageData(x, y, size, size);
+  let pixel, dist: number, val;
+
+  for (let dx = 0; dx < size; dx++) {
+    for (let dy = 0; dy < size; dy++) {
+      dist = Math.hypot(dx - radius, dy - radius);
+      if (dist > radius) {
+        continue;
+      }
+      if (fillMode === "flat") {
+        drawPixel(noiseData, dx, dy, size, [level, level, level]);
+      } else if(fillMode === 'add') {
+        pixel = getPixel(noiseData, dx, dy, size);
+        val = Math.ceil(
+          pixel[0] + 10 - (dist/radius) * 9 * slope
+        );
+        drawPixel(noiseData, dx, dy, size, [val, val, val]);
+      }
+    }
+  }
+  noiseCtx.putImageData(noiseData, x, y);
 };
 
 export const blurMixMap = (canvas: HTMLCanvasElement | null, amount = 2) => {
