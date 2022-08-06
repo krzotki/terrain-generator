@@ -299,6 +299,52 @@ export const generateMixMap = (
   mixMapCtx.putImageData(mixMapData, 0, 0);
 };
 
+export const fillMixMapCircle = (
+  mixMapCanvas: HTMLCanvasElement | null,
+  noiseCanvas: HTMLCanvasElement | null,
+  mapType: MapType,
+  circle: {
+    x: number;
+    y: number;
+    radius: number;
+  }
+) => {
+  if (!noiseCanvas || !mixMapCanvas) {
+    return;
+  }
+
+  const noiseCtx = noiseCanvas.getContext("2d");
+
+  const mixMapCtx = mixMapCanvas.getContext("2d");
+  if (!noiseCtx || !mixMapCtx) {
+    return;
+  }
+
+  const { levels, mixAmount } = MapProperties[mapType];
+
+  let { x, y, radius } = circle;
+
+  const size = Math.floor(radius * 2);
+
+  const noiseData = noiseCtx.getImageData(x, y, size, size);
+  const mixMapData = mixMapCtx.getImageData(x, y, size, size);
+  let pixel, val, mixPixel, dist;
+
+  for (let dx = 0; dx < size; dx++) {
+    for (let dy = 0; dy < size; dy++) {
+      dist = Math.hypot(dx - radius, dy - radius);
+      if (dist > radius) {
+        continue;
+      }
+      pixel = getPixel(noiseData, dx, dy, size);
+      val = pixel.reduce((prev, curr) => prev + curr, 0) / 3 / 255;
+      mixPixel = getColorByHeight(val, levels);
+      drawPixel(mixMapData, dx, dy, size, mixPixel);
+    }
+  }
+  mixMapCtx.putImageData(mixMapData, x, y);
+};
+
 export const blurMixMap = (canvas: HTMLCanvasElement | null, amount = 2) => {
   if (!canvas) return;
 

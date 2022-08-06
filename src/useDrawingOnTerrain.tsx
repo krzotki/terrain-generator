@@ -1,7 +1,12 @@
 import React from "react";
 import * as BABYLON from "@babylonjs/core/Legacy/legacy";
 import { getImageBinary } from "./utils";
-import { generateMixMap, MapProperties, MapType } from "./generators";
+import {
+  fillMixMapCircle,
+  generateMixMap,
+  MapProperties,
+  MapType,
+} from "./generators";
 import { MAP_SIZE, RESOLUTION, SUBDIVISIONS } from "./App";
 import { MixMaterial } from "@babylonjs/materials";
 
@@ -58,6 +63,29 @@ export const useDrawingOnTerrain = ({
     [ground, mapType]
   );
 
+  const updateMixMap = React.useCallback(() => {
+    if(!gameScene) {
+      return;
+    }
+
+    const currentMaterial = gameScene.getMaterialByName(
+      "terrainMaterial"
+    ) as MixMaterial;
+    if (currentMaterial) {
+      // const mixMapUrl = mixMapCanvasRef.current.toDataURL("image/png");
+      currentMaterial.mixTexture1.dispose();
+      const rawTexture = BABYLON.RawTexture.CreateRGBATexture(
+        getImageBinary(mixMapCanvasRef.current, RESOLUTION),
+        RESOLUTION.x,
+        RESOLUTION.y,
+        gameScene,
+        undefined,
+        true
+      );
+      currentMaterial.mixTexture1 = rawTexture;
+    }
+  }, [gameScene, mixMapCanvasRef]);
+
   React.useEffect(() => {
     const color = 255 * noiseLevel;
     const rgb = `rgb(${color}, ${color}, ${color})`;
@@ -88,13 +116,21 @@ export const useDrawingOnTerrain = ({
       const cy = ratioY * RESOLUTION.y;
 
       const scale = rect.width / RESOLUTION.x;
+      const radius = brushSize / scale / 2
 
       ctx.beginPath();
-      ctx.arc(cx, cy, brushSize / scale / 2, 0, 2 * Math.PI, false);
+      ctx.arc(cx, cy, radius, 0, 2 * Math.PI, false);
       ctx.fillStyle = rgb;
       ctx.fill();
+
+
+      fillMixMapCircle(mixMapCanvasRef.current, noiseCanvasRef.current, mapType, {
+        x: cx - radius,
+        y: cy - radius,
+        radius
+      });
     },
-    [noiseCanvasRef, noiseLevel, brushSize]
+    [noiseCanvasRef, noiseLevel, brushSize, mapType, mixMapCanvasRef]
   );
 
   React.useEffect(() => {
@@ -121,30 +157,8 @@ export const useDrawingOnTerrain = ({
               return;
             }
 
-            generateMixMap(
-              mixMapCanvasRef.current,
-              noiseCanvasRef.current,
-              mapType
-            );
-
-            const currentMaterial = gameScene.getMaterialByName(
-              "terrainMaterial"
-            ) as MixMaterial;
-            if (currentMaterial) {
-              // const mixMapUrl = mixMapCanvasRef.current.toDataURL("image/png");
-              currentMaterial.mixTexture1.dispose();
-              const rawTexture = BABYLON.RawTexture.CreateRGBATexture(
-                getImageBinary(mixMapCanvasRef.current, RESOLUTION),
-                RESOLUTION.x,
-                RESOLUTION.y,
-                gameScene,
-                undefined,
-                true
-              );
-              currentMaterial.mixTexture1 = rawTexture;
-            }
-
             updateTerrain(binary);
+            updateMixMap();
           }
 
           hasBeenDrawing = false;
@@ -177,6 +191,7 @@ export const useDrawingOnTerrain = ({
           }
 
           updateTerrain(binary);
+          updateMixMap();
         }
       });
 
@@ -192,6 +207,7 @@ export const useDrawingOnTerrain = ({
     brushSize,
     updateTerrain,
     mixMapCanvasRef,
+    updateMixMap
   ]);
 
   const moveBrush = React.useCallback(
