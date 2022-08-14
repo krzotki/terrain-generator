@@ -87,3 +87,7 @@ export const getImageBinary = (
 
   return binary;
 };
+
+export const getSpotlightAngle = (radius: number, height: number) => {
+  return Math.atan(radius / height) / 2;
+};

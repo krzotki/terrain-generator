@@ -1,6 +1,6 @@
 import React from "react";
 import * as BABYLON from "@babylonjs/core/Legacy/legacy";
-import { getImageBinary } from "./utils";
+import { getImageBinary, getSpotlightAngle } from "./utils";
 import {
   fillMixMapCircle,
   fillNoiseCircle,
@@ -10,6 +10,7 @@ import {
 } from "./generators";
 import { MAP_SIZE, RESOLUTION, SUBDIVISIONS } from "./App";
 import { MixMaterial } from "@babylonjs/materials";
+import { SPOTLIGHT_HEIGHT } from "./useGameEngine";
 
 type PropsType = {
   gameScene: BABYLON.Scene | null | undefined;
@@ -36,6 +37,19 @@ export const useDrawingOnTerrain = ({
   const [fillMode, setFillmode] = React.useState<FillMode>("flat");
 
   const brushRef = React.useRef<HTMLDivElement>(null);
+
+  const updateBrushSize = React.useCallback(
+    (size: number) => {
+      setBrushSize(size);
+      const spotLight = gameScene?.getLightByName(
+        "spotLight"
+      ) as BABYLON.SpotLight;
+      if (spotLight) {
+        spotLight.angle = getSpotlightAngle(brushSize / 2, SPOTLIGHT_HEIGHT);
+      }
+    },
+    [setBrushSize, brushSize, gameScene]
+  );
 
   const updateTerrain = React.useCallback(
     (binary: Uint8Array) => {
@@ -160,6 +174,9 @@ export const useDrawingOnTerrain = ({
     if (gameScene) {
       let hasBeenDrawing = false;
       let drawing = false;
+      const spotLight = gameScene.getLightByName(
+        "spotLight"
+      ) as BABYLON.SpotLight;
       const observer = gameScene.onPointerObservable.add((evt) => {
         if (
           evt.type === BABYLON.PointerEventTypes.POINTERDOWN &&
@@ -187,8 +204,20 @@ export const useDrawingOnTerrain = ({
           hasBeenDrawing = false;
         }
 
+        if (evt.type === BABYLON.PointerEventTypes.POINTERMOVE) {
+          const position = evt.pickInfo?.pickedPoint;
+
+          if (!position || !spotLight) {
+            return;
+          }
+
+          spotLight.position.x = position.x;
+          spotLight.position.z = position.z;
+        }
+
         if (
-          evt.type === BABYLON.PointerEventTypes.POINTERMOVE &&
+          (evt.type === BABYLON.PointerEventTypes.POINTERMOVE ||
+            evt.type === BABYLON.PointerEventTypes.POINTERDOWN) &&
           drawing &&
           noiseCanvasRef.current
         ) {
@@ -254,7 +283,7 @@ export const useDrawingOnTerrain = ({
     noiseLevel,
     setNoiseLevel,
     brushSize,
-    setBrushSize,
+    setBrushSize: updateBrushSize,
     brushHidden,
     setBrushHidden,
     drawing,

@@ -1,6 +1,8 @@
 import React from "react";
 import * as BABYLON from "@babylonjs/core/Legacy/legacy";
 
+export const SPOTLIGHT_HEIGHT = 20;
+
 const createScene = function (
   engine: BABYLON.Engine,
   canvas: HTMLCanvasElement
@@ -22,8 +24,8 @@ const createScene = function (
   camera.inputs.addMouseWheel();
   camera.inertia = 0.8;
 
-  if(camera.inputs._mouseInput) {
-    camera.inputs._mouseInput.buttons = [1,2];
+  if (camera.inputs._mouseInput) {
+    camera.inputs._mouseInput.buttons = [1, 2];
   }
 
   camera.setTarget(BABYLON.Vector3.Zero());
@@ -32,6 +34,22 @@ const createScene = function (
     new BABYLON.Vector3(0, 1, 0),
     scene
   );
+  light.intensity = 1;
+
+  const angle = Math.atan(1 / SPOTLIGHT_HEIGHT);
+
+  const spotLight = new BABYLON.SpotLight(
+    "spotLight",
+    new BABYLON.Vector3(0, SPOTLIGHT_HEIGHT, 0),
+    new BABYLON.Vector3(0, -1, 0),
+    angle * 2,
+    2,
+    scene
+  );
+  spotLight.diffuse = BABYLON.Color3.Green();
+
+  spotLight.intensity = 1;
+
   return {
     scene,
     camera,
