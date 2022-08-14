@@ -40,6 +40,7 @@ export const DrawOptions = ({
         >
           <option value="flat">Flat</option>
           <option value="add">Add</option>
+          <option value="remove">Remove</option>
         </select>
       </div>
 
@@ -75,7 +76,7 @@ export const DrawOptions = ({
         </div>
       )}
 
-      {fillMode === "add" && (
+      {(fillMode === "add" || fillMode === "remove") && (
         <div className="d-flex w-100 align-items-center justify-content-center">
           <label className="m-3 w-50" htmlFor="slope">
             Slope: <strong>{slope}</strong>

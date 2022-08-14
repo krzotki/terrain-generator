@@ -19,7 +19,7 @@ type PropsType = {
   mapType: MapType;
 };
 
-export type FillMode = "flat" | "add";
+export type FillMode = "flat" | "add" | "remove";
 
 export const useDrawingOnTerrain = ({
   gameScene,
@@ -122,12 +122,6 @@ export const useDrawingOnTerrain = ({
 
       const scale = rect.width / RESOLUTION.x;
       const radius = brushSize / scale / 2;
-
-      // ctx.beginPath();
-      // ctx.arc(cx, cy, radius, 0, 2 * Math.PI, false);
-      // ctx.fillStyle = rgb;
-      // ctx.fill();
-
       fillNoiseCircle(
         noiseCanvasRef.current,
         {

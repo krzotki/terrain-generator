@@ -372,7 +372,7 @@ export const fillNoiseCircle = (
   const size = Math.floor(radius * 2);
 
   const noiseData = noiseCtx.getImageData(x, y, size, size);
-  let pixel, dist: number, val;
+  let pixel, dist: number, val, sign;
 
   for (let dx = 0; dx < size; dx++) {
     for (let dy = 0; dy < size; dy++) {
@@ -382,11 +382,10 @@ export const fillNoiseCircle = (
       }
       if (fillMode === "flat") {
         drawPixel(noiseData, dx, dy, size, [level, level, level]);
-      } else if(fillMode === 'add') {
+      } else {
+        sign = fillMode === "add" ? 1 : -1;
         pixel = getPixel(noiseData, dx, dy, size);
-        val = Math.ceil(
-          pixel[0] + 10 - (dist/radius) * 9 * slope
-        );
+        val = Math.ceil(pixel[0] + (10 - (dist / radius) * 9 * slope) * sign);
         drawPixel(noiseData, dx, dy, size, [val, val, val]);
       }
     }
