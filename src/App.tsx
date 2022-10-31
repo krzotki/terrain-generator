@@ -122,10 +122,10 @@ function App() {
   const loadImage = React.useCallback(
     (evt: any) => {
       if (!evt || !evt.target) return;
-      const image = new Image();
+      const image = new Image(RESOLUTION.x, RESOLUTION.y);
       image.onload = () => {
         const ctx = noiseCanvasRef.current?.getContext("2d");
-        ctx?.drawImage(image, 0, 0);
+        ctx?.drawImage(image, 0, 0, image.width, image.height);
       };
       image.src = URL.createObjectURL(evt.target.files[0]);
     },
